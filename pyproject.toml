@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "infinite-podcast-requester"
+version = "0.1.0"
+description = ""
+authors = ["Tony Du <tony56a@gmail.com>"]
+readme = "README.md"
+packages = [{include = "infinite_podcast_requester"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+aio-pika = "^9.4.3"
+discord-py = "^2.4.0"
+twitchio = "^2.10.0"
+redis = "^5.1.1"
+black = "^24.8.0"
+zharguy-scripts-grpc-python = "^1.66.2.1.20241006181347+88c169b0712e"
+
+
+[[tool.poetry.source]]
+name = "buf"
+url = "https://buf.build/gen/python"
+default = false
+secondary = false
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
