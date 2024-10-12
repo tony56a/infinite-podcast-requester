@@ -15,8 +15,8 @@ async def on_message(message: AbstractIncomingMessage) -> None:
         event = script_generation_status_event_pb2.ScriptGenerationStatusEvent()
         event.ParseFromString(message.body)
         message = f"Reported status id={event.id} topic={event.topic} status={script_generation_status_pb2.ScriptGenerationStatus.Name(event.status)}"
-        await send_status_message(message)
         logging.info(message)
+        await send_status_message(event)
 
 
 async def listener_init() -> None:

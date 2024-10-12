@@ -11,3 +11,4 @@ Script that connects with the [`infinite-podcasts-kt`](https://github.com/tony56
 * Better organization
 * Unit tests
 * Recently Played Script display commands
+* Add correct typing to codebase

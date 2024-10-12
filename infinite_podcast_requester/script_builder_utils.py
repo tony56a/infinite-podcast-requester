@@ -55,8 +55,7 @@ def build_random_script():
     topic = [
         "A toally random and absurd podcast topic",
         "A totally normal and ordinary podcast topic",
-        "the host being really angry at the guest for some reason",
-        "the guest being really mad at the host for some reason",
+        "A spooky and dark topic, but with a humurous viewpoint",
     ]
     return build_script_request(
         topic=random.choice(topic),

@@ -6,21 +6,24 @@ import script_builder_utils
 from config import configuration
 from discord import app_commands
 from discord.ext import commands
+from events.v1 import script_generation_status_event_pb2
 from enums.v1 import (
     ext_user_source_pb2,
     script_type_pb2,
     character_type_pb2,
     speaker_voice_type_pb2,
+    script_generation_status_pb2
 )
 from services.v1 import script_service_pb2_grpc, script_service_pb2
 
 logger = logging.getLogger()
 
-
 intents = discord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(command_prefix='?', intents=intents)
+
+mapping = {}
 
 async def character_type_autocomplete(
     interaction: discord.Interaction,
@@ -86,15 +89,17 @@ async def generate_show_cmd(interaction: discord.Interaction, topic: str, charac
     )
 
     user = script_builder_utils.build_user(ext_id=interaction.user.global_name, source=ext_user_source_pb2.EXT_USER_SOURCE_DISCORD)
-    script_request = script_builder_utils.build_script_request(topic = topic, user=user, guest_character=character)
+    script_request = script_builder_utils.build_script_request(topic = topic, user=user, guest_character=character, script_type=show_type)
     try:
         async with grpc.aio.insecure_channel(
             configuration["service"]["path"]
         ) as grpc_channel:
             service = script_service_pb2_grpc.ScriptServiceStub(grpc_channel)
-            await service.CreateScript(request=script_request)
+            response = await service.CreateScript(request=script_request)
+            mapping[response.script.id.value] = interaction.user.id
     except Exception as e:
         logger.exception(e)
+        await interaction.response.send_message(f'Whoops! Try again later', ephemeral=True)
     await interaction.response.send_message(f'Sent a request for a show with topic {topic}', ephemeral=True)
 
 @app_commands.command(name="regenerate_script", description="Regenerate a script for playback")
@@ -110,9 +115,30 @@ async def regenerate_show_cmd(interaction: discord.Interaction, script_id: str):
             await service.GenerateScript(request=regen_request)
     except Exception as e:
         logger.exception(e)
+        await interaction.response.send_message(f'Whoops! Try again later', ephemeral=True)
     await interaction.response.send_message(f'Regenerating {script_id}', ephemeral=True)
 
-async def send_status_message(message: str):
+async def send_status_message(event: script_generation_status_event_pb2.ScriptGenerationStatusEvent):
+    if event.script_request_user.user_source != ext_user_source_pb2.EXT_USER_SOURCE_DISCORD:
+        return
+
+    try:
+        user_id = mapping.get(event.id)
+        mapping.pop(event.id, None)
+        user = await bot.fetch_user(user_id)
+    except:
+        user = None
+    if user:
+        message_prefix = f"<@{user_id}>, your script about {event.topic} "
+    else:
+        message_prefix = f"The script about {event.topic} "
+
+    if event.status == script_generation_status_pb2.SCRIPT_GENERATION_STATUS_SUCCEEDED:
+        
+        message = f"was **generated successfully**!\nTo replay, regenerate using the ID {event.id}"
+    else:
+        message = f"was **not generated** :(\nTo replay, regenerate using the ID {event.id}"
+
     for channel_id in configuration["discord"]["broadcast_channels"]:
         channel = bot.get_channel(channel_id)
-        await channel.send(message)
+        await channel.send(message_prefix + message)
